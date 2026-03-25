@@ -1,0 +1,19 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm install:*)",
+      "Bash(npx vue-tsc:*)",
+      "Bash(npx vite:*)",
+      "Bash(timeout 4 wscat -c ws://127.0.0.1:18789)",
+      "Bash(node -e \":*)",
+      "WebFetch(domain:docs.openclaw.ai)",
+      "Read(//Users/dapeng/Library/pnpm/global/5/node_modules/**)",
+      "Read(//Users/dapeng/Library/pnpm/global/5/.pnpm/openclaw@2026.3.13_@discordjs+opus@0.10.0_@napi-rs+canvas@0.1.95_@types+express@5.0.6/node_modules/openclaw/**)",
+      "Read(//Users/dapeng/Library/pnpm/global/**)",
+      "Bash(python3 -m json.tool)",
+      "Bash(cat ~/.openclaw/devices/*.json)",
+      "Bash(python3 -c \":*)",
+      "Bash(curl -s http://127.0.0.1:18789/api/health)"
+    ]
+  }
+}

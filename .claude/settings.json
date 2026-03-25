@@ -1,0 +1,17 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(xargs kill:*)",
+      "Bash(node -e \":*)",
+      "Read(//Users/dapeng/.openclaw-vue-ui/**)",
+      "Bash(npm run:*)",
+      "Read(//private/tmp/**)",
+      "Bash(grep -r \"method\\\\|send\\\\|chat\" /Users/dapeng/Library/pnpm/global/5/node_modules/openclaw/dist/*.js)",
+      "Bash(npx tsc:*)"
+    ],
+    "additionalDirectories": [
+      "/Users/dapeng/a-cc-projects/openclaw-vue-ui",
+      "/tmp"
+    ]
+  }
+}

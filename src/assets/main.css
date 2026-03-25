@@ -1,0 +1,33 @@
+@import "tailwindcss";
+@import "element-plus/dist/index.css";
+
+:root {
+  --oc-primary: #e74c3c;
+  --oc-primary-rgb: 231, 76, 60;
+  --oc-bg: #ffffff;
+  --oc-bg-secondary: #f9fafb;
+  --oc-text: #1f2937;
+  --oc-text-secondary: #6b7280;
+  --oc-border: #e5e7eb;
+  --oc-user-bubble: #fef2f2;
+  --oc-assistant-bubble: #f3f4f6;
+  --oc-tool-bg: #fff7ed;
+  --oc-tool-border: #fed7aa;
+
+  --el-color-primary: var(--oc-primary);
+  --el-color-primary-light-3: color-mix(in srgb, var(--oc-primary) 70%, white);
+  --el-color-primary-light-5: color-mix(in srgb, var(--oc-primary) 50%, white);
+  --el-color-primary-light-7: color-mix(in srgb, var(--oc-primary) 30%, white);
+  --el-color-primary-light-8: color-mix(in srgb, var(--oc-primary) 20%, white);
+  --el-color-primary-light-9: color-mix(in srgb, var(--oc-primary) 12%, white);
+  --el-color-primary-dark-2: color-mix(in srgb, var(--oc-primary) 85%, black);
+  --el-color-primary-rgb: var(--oc-primary-rgb);
+}
+
+html, body, #app {
+  height: 100%;
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  color: var(--oc-text);
+  background: var(--oc-bg);
+}
