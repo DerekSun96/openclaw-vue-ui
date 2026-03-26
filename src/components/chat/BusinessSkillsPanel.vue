@@ -48,6 +48,11 @@ const emit = defineEmits<{
 const skills = ref<OpenClawSkillSummary[]>([]);
 const loading = ref(true);
 const error = ref("");
+const skillPrefix = "tigzx";
+
+function isBusinessSkill(skill: OpenClawSkillSummary) {
+  return skill.id.toLowerCase().startsWith(skillPrefix) || skill.name.toLowerCase().startsWith(skillPrefix);
+}
 
 async function fetchSkills() {
   loading.value = true;
@@ -61,7 +66,7 @@ async function fetchSkills() {
       throw new Error(payload?.error || "加载 Skills 失败");
     }
 
-    skills.value = Array.isArray(payload?.skills) ? payload.skills : [];
+    skills.value = Array.isArray(payload?.skills) ? payload.skills.filter(isBusinessSkill) : [];
   } catch (err) {
     error.value = err instanceof Error ? err.message : "加载 Skills 失败";
     skills.value = [];
@@ -190,6 +195,9 @@ onMounted(() => {
   font-weight: 500;
   color: #1a1a1a;
   margin: 0 0 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .skill-desc {

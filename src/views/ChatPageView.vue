@@ -8,6 +8,10 @@
           <div class="chat-toolbar">
             <SessionSelector />
             <div class="toolbar-spacer" />
+            <button class="reset-chat-btn" @click="resetChat">
+              <Icon icon="mdi:refresh" class="text-sm" />
+              重置对话
+            </button>
             <button class="new-chat-btn" @click="newChat">
               <Icon icon="mdi:plus" class="text-sm" />
               新建对话
@@ -45,10 +49,12 @@ import SessionSelector from "@/components/session/SessionSelector.vue";
 import ChatView from "@/components/chat/ChatView.vue";
 import { useSessionsStore } from "@/stores/sessions";
 import { useChatStore } from "@/stores/chat";
+import { useConnectionStore } from "@/stores/connection";
 import type { ThemeSelectionItem } from "@/types/library";
 
 const sessionsStore = useSessionsStore();
 const chatStore = useChatStore();
+const connectionStore = useConnectionStore();
 const selectedThemes = ref<ThemeSelectionItem[]>([]);
 const prefillText = ref("");
 const prefillVersion = ref(0);
@@ -57,6 +63,25 @@ const clearThemeSelectionVersion = ref(0);
 async function newChat() {
   chatStore.clearMessages();
   sessionsStore.createLocalSession();
+  resetChatState();
+}
+
+function resetChatState() {
+  selectedThemes.value = [];
+  clearThemeSelectionVersion.value += 1;
+  prefillText.value = "";
+  prefillVersion.value += 1;
+}
+
+async function resetChat() {
+  chatStore.clearMessages();
+  resetChatState();
+  await sendNewCommand(sessionsStore.currentId);
+}
+
+async function sendNewCommand(sessionId: string | null) {
+  if (!sessionId || connectionStore.status !== "connected") return;
+  await chatStore.sendMessage("/new", sessionId);
 }
 
 function handleThemeSelection(themes: ThemeSelectionItem[]) {
@@ -113,13 +138,12 @@ function handleSkillSelect(exampleRequest: string) {
   flex: 1;
 }
 
+.reset-chat-btn,
 .new-chat-btn {
   display: flex;
   align-items: center;
   gap: 4px;
   padding: 5px 12px;
-  background: #e74c3c;
-  color: #fff;
   border: none;
   border-radius: 6px;
   font-size: 13px;
@@ -127,9 +151,23 @@ function handleSkillSelect(exampleRequest: string) {
   cursor: pointer;
   transition: opacity 0.15s;
 }
+
+.reset-chat-btn {
+  background: #f3f4f6;
+  color: #374151;
+}
+
+.new-chat-btn {
+  background: #e74c3c;
+  color: #fff;
+}
+
+.reset-chat-btn:hover,
 .new-chat-btn:hover {
   opacity: 0.88;
 }
+
+.reset-chat-btn:disabled,
 .new-chat-btn:disabled {
   opacity: 0.5;
   cursor: not-allowed;
