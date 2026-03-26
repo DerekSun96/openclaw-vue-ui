@@ -29,6 +29,11 @@
       <div class="oc-header-right">
         <el-dropdown trigger="hover" @command="handleUserCommand">
           <button type="button" class="oc-user-trigger" aria-label="用户菜单">
+            <span v-if="departmentName" class="oc-user-dept">
+              <Icon icon="mdi:domain" class="oc-user-dept-icon" />
+              <span class="oc-user-dept-text">{{ departmentName }}</span>
+            </span>
+            <span v-if="departmentName" class="oc-user-divider" aria-hidden="true" />
             <span class="oc-avatar">
               <el-avatar v-if="avatarUrl" :src="avatarUrl" :size="36" class="oc-el-avatar" />
               <el-avatar v-else :size="36" class="oc-el-avatar oc-el-avatar-fallback">
@@ -111,6 +116,7 @@ function isActive(to: string) {
 
 const displayName = computed(() => userStore.username || "未命名用户");
 const avatarUrl = computed(() => userStore.avatar || "");
+const departmentName = computed(() => userStore.deptName || "");
 
 async function handleUserCommand(command: string | number | object) {
   if (command !== "logout") return;
@@ -235,6 +241,46 @@ async function handleUserCommand(command: string | number | object) {
   opacity: 0.9;
 }
 
+.oc-user-dept {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 180px;
+  min-width: 0;
+  padding: 6px 12px;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--oc-primary) 18%, white);
+  background: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--oc-primary) 10%, white) 0%,
+    color-mix(in srgb, var(--oc-primary) 6%, white) 100%
+  );
+  color: color-mix(in srgb, var(--oc-primary) 82%, #4a2a24);
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1;
+  box-shadow: 0 1px 2px color-mix(in srgb, var(--oc-primary) 10%, transparent);
+}
+
+.oc-user-dept-icon {
+  flex-shrink: 0;
+  font-size: 14px;
+  color: var(--oc-primary);
+}
+
+.oc-user-dept-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.oc-user-divider {
+  width: 1px;
+  height: 16px;
+  flex-shrink: 0;
+  background: #ddd;
+}
+
 .oc-user-trigger:focus,
 .oc-user-trigger:focus-visible,
 .oc-user-trigger:active {
@@ -243,12 +289,12 @@ async function handleUserCommand(command: string | number | object) {
 }
 
 .oc-user-name {
-  max-width: 88px;
+  max-width: 120px;
   overflow: hidden;
   color: #2f2a27;
   font-size: 13px;
   font-weight: 500;
-  line-height: 1;
+  line-height: 1.1;
   text-overflow: ellipsis;
   white-space: nowrap;
 }

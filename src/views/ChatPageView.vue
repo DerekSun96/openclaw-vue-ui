@@ -41,7 +41,7 @@
 
           <!-- Card 2：业务流程 Skills 目录 -->
           <div class="panel-card">
-            <h3 class="panel-title">业务流程 Skills 目录</h3>
+            <h3 class="panel-title">业务流程 Skills</h3>
             <div class="skills-list">
               <div v-for="skill in skills" :key="skill.id" class="skill-item">
                 <div class="skill-icon-wrap">
@@ -202,7 +202,9 @@ const skills = [
   flex-shrink: 0;
 }
 
-.toolbar-spacer { flex: 1; }
+.toolbar-spacer {
+  flex: 1;
+}
 
 .new-chat-btn {
   display: flex;
@@ -218,8 +220,13 @@ const skills = [
   cursor: pointer;
   transition: opacity 0.15s;
 }
-.new-chat-btn:hover { opacity: 0.88; }
-.new-chat-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.new-chat-btn:hover {
+  opacity: 0.88;
+}
+.new-chat-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
 
 .chat-content {
   flex: 1;

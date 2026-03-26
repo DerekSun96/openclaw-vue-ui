@@ -23,12 +23,16 @@ export const useUserStore = defineStore("user", {
     longToken: getLongToken() as string,
     username: "",
     avatar: "",
+    deptId: "",
+    deptName: "",
     userInfoLoaded: false,
   }),
   getters: {
     getToken: (state) => state.token,
     getUsername: (state) => state.username,
     getAvatar: (state) => state.avatar,
+    getDeptId: (state) => state.deptId,
+    getDeptName: (state) => state.deptName,
     getLongToken: (state) => state.longToken,
     getUserInfoLoaded: (state) => state.userInfoLoaded,
   },
@@ -61,6 +65,14 @@ export const useUserStore = defineStore("user", {
      */
     setAvatar(avatar: string) {
       this.avatar = avatar;
+    },
+
+    setDeptId(deptId: string) {
+      this.deptId = deptId;
+    },
+
+    setDeptName(deptName: string) {
+      this.deptName = deptName;
     },
 
     setUserInfoLoaded(loaded: boolean) {
@@ -103,12 +115,14 @@ export const useUserStore = defineStore("user", {
      */
     async getUserInfo() {
       const { data } = await getUserInfo();
-      const { avatar, permissions, roles, username, menus } = {
+      const { avatar, permissions, roles, username, menus, deptId, deptName } = {
         avatar: data.user.avatar,
         permissions: data.permissions,
         roles: data.roles,
         username: data.user.nickname,
         menus: data.menus,
+        deptId: data.user.deptId,
+        deptName: data.user.deptName,
       };
 
       // 检验返回数据是否正常，无对应参数，将使用默认用户名,头像和Permissions
@@ -126,6 +140,8 @@ export const useUserStore = defineStore("user", {
         // const routesStore = useRoutesStore();
         this.setUsername(username || "");
         this.setAvatar(avatar || "");
+        this.setDeptId(deptId || "");
+        this.setDeptName(deptName || "");
         this.setUserInfoLoaded(true);
         // if (roles) permissionStore.setRole(roles);
         // if (permissions) permissionStore.setPermission(permissions);
@@ -155,6 +171,8 @@ export const useUserStore = defineStore("user", {
       this.setToken("");
       this.setUsername("");
       this.setAvatar("");
+      this.setDeptId("");
+      this.setDeptName("");
       this.setUserInfoLoaded(false);
       // permissionStore.setPermission([]);
       // permissionStore.setRole([]);
