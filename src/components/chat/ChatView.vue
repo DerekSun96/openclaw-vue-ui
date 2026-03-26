@@ -6,6 +6,13 @@ import { useConnectionStore } from '@/stores/connection'
 import { gateway } from '@/stores/connection'
 import MessageList from './MessageList.vue'
 import MessageInput from './MessageInput.vue'
+import type { ThemeSelectionItem } from '@/types/library'
+
+const props = withDefaults(defineProps<{
+  selectedThemes?: ThemeSelectionItem[]
+}>(), {
+  selectedThemes: () => [],
+})
 
 const sessionsStore = useSessionsStore()
 const chatStore = useChatStore()
@@ -35,7 +42,11 @@ onMounted(() => {
 
 function handleSend(text: string) {
   if (sessionsStore.currentId) {
-    chatStore.sendMessage(text, sessionsStore.currentId)
+    const selectedThemeNames = props.selectedThemes.map((theme) => theme.name).filter(Boolean)
+    const message = selectedThemeNames.length > 0
+      ? `【只使用视图： ${selectedThemeNames.join(' ')}】${text}`
+      : text
+    chatStore.sendMessage(message, sessionsStore.currentId)
   }
 }
 </script>
