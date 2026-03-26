@@ -14,13 +14,21 @@
             </button>
             <!-- <ModelSelector /> -->
           </div>
-          <ChatView :selected-themes="selectedThemes" class="chat-content" />
+          <ChatView
+            :selected-themes="selectedThemes"
+            :prefill-text="prefillText"
+            :prefill-version="prefillVersion"
+            class="chat-content"
+          />
         </div>
 
         <!-- 右侧列：两个独立 card，上下排列 -->
         <div class="right-col">
-          <DataThemePanel @selection-change="handleThemeSelection" />
-          <BusinessSkillsPanel />
+          <DataThemePanel
+            :clear-selection-version="clearThemeSelectionVersion"
+            @selection-change="handleThemeSelection"
+          />
+          <BusinessSkillsPanel @skill-select="handleSkillSelect" />
         </div>
       </div>
     </div>
@@ -42,6 +50,9 @@ import type { ThemeSelectionItem } from "@/types/library";
 const sessionsStore = useSessionsStore();
 const chatStore = useChatStore();
 const selectedThemes = ref<ThemeSelectionItem[]>([]);
+const prefillText = ref("");
+const prefillVersion = ref(0);
+const clearThemeSelectionVersion = ref(0);
 
 async function newChat() {
   chatStore.clearMessages();
@@ -50,6 +61,13 @@ async function newChat() {
 
 function handleThemeSelection(themes: ThemeSelectionItem[]) {
   selectedThemes.value = themes;
+}
+
+function handleSkillSelect(exampleRequest: string) {
+  selectedThemes.value = [];
+  clearThemeSelectionVersion.value += 1;
+  prefillText.value = exampleRequest;
+  prefillVersion.value += 1;
 }
 </script>
 

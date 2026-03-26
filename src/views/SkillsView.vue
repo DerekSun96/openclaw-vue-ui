@@ -1,105 +1,156 @@
 <template>
   <SidebarLayout>
     <div class="p-8">
-      <!-- Header -->
       <div class="mb-8">
         <h1 class="text-2xl font-bold text-gray-900">Skills</h1>
-        <p class="text-gray-500 text-sm mt-1">可用的 AI 技能与工具</p>
+        <p class="text-gray-500 text-sm mt-1">显示当前 workspace 下的 Skills</p>
       </div>
 
-      <!-- Filter tabs -->
-      <div class="flex gap-2 mb-6">
-        <button
-          v-for="tab in tabs"
-          :key="tab.value"
-          class="px-4 py-1.5 rounded-full text-[13px] font-medium transition-colors border"
-          :class="activeTab === tab.value
-            ? 'text-white border-transparent'
-            : 'bg-white border-gray-200 text-gray-500 hover:text-gray-700 hover:border-gray-300'"
-          :style="activeTab === tab.value ? { background: 'var(--oc-primary)', borderColor: 'var(--oc-primary)' } : {}"
-          @click="activeTab = tab.value"
-        >
-          {{ tab.label }}
-        </button>
+      <div
+        v-if="loading"
+        class="rounded-xl border border-dashed border-gray-200 bg-white px-6 py-12 text-center text-sm text-gray-500"
+      >
+        正在加载 workspace Skills...
       </div>
-
-      <!-- Skills grid -->
-      <div class="grid grid-cols-3 gap-4">
+      <div
+        v-else-if="error"
+        class="rounded-xl border border-red-200 bg-red-50 px-6 py-12 text-center text-sm text-red-500"
+      >
+        {{ error }}
+      </div>
+      <div
+        v-else-if="skills.length === 0"
+        class="rounded-xl border border-dashed border-gray-200 bg-white px-6 py-12 text-center text-sm text-gray-500"
+      >
+        当前 workspace 下暂无 Skills
+      </div>
+      <div v-else class="grid grid-cols-3 gap-4">
         <div
-          v-for="skill in filteredSkills"
-          :key="skill.name"
+          v-for="skill in skills"
+          :key="skill.id"
           class="bg-white border border-gray-200 rounded-xl p-5 hover:border-gray-300 hover:shadow-sm transition-all"
         >
-          <div class="flex items-start justify-between mb-3">
-            <div class="w-10 h-10 rounded-lg flex items-center justify-center" :style="{ background: skill.color + '18' }">
-              <Icon :icon="skill.icon" class="text-xl" :style="{ color: skill.color }" />
+          <div class="flex items-center justify-between gap-4 mb-3">
+            <div class="flex items-center gap-3 min-w-0">
+              <div class="w-10 h-10 rounded-lg flex items-center justify-center shrink-0" :style="{ background: skill.color + '18' }">
+                <Icon :icon="skill.icon" class="text-xl" :style="{ color: skill.color }" />
+              </div>
+              <h3 class="text-sm font-semibold text-gray-900 truncate">{{ skill.name }}</h3>
             </div>
-            <el-tag
-              size="small"
-              :class="skill.status === 'active' ? 'oc-tag-active' : 'oc-tag-inactive'"
-            >
-              {{ skill.status === 'active' ? '启用' : '未启用' }}
-            </el-tag>
+            <span class="skill-status" :class="skill.available ? 'skill-status--active' : 'skill-status--inactive'">
+              <span class="skill-status-dot" />
+              {{ skill.available ? '启用' : '未启用' }}
+            </span>
           </div>
-          <h3 class="text-sm font-semibold text-gray-900 mb-1">{{ skill.name }}</h3>
-          <p class="text-[13px] text-gray-400 leading-relaxed">{{ skill.desc }}</p>
-          <div class="mt-3">
-            <el-tag size="small" class="oc-tag-category">{{ skill.category }}</el-tag>
+          <p class="text-[13px] text-gray-400 leading-relaxed min-h-[40px]">{{ skill.desc || '暂无描述' }}</p>
+          <div class="mt-3 flex flex-wrap gap-2">
+            <span v-if="skill.exampleRequest" class="skill-meta">示例请求</span>
           </div>
+          <p v-if="skill.exampleRequest" class="text-xs text-gray-400 mt-2 leading-relaxed">
+            示例：{{ skill.exampleRequest }}
+          </p>
         </div>
       </div>
+
     </div>
   </SidebarLayout>
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { onMounted, ref } from 'vue'
 import { Icon } from '@iconify/vue'
 import SidebarLayout from '@/components/layout/SidebarLayout.vue'
+import type { OpenClawSkillSummary } from '@/types/openclaw'
 
-const activeTab = ref('all')
+interface SkillCard extends OpenClawSkillSummary {
+  desc: string
+  icon: string
+  color: string
+}
 
-const tabs = [
-  { label: '全部', value: 'all' },
-  { label: '已启用', value: 'active' },
-  { label: '未启用', value: 'inactive' },
-]
+interface SkillsResponse {
+  ok?: boolean
+  error?: string
+  workspace?: string
+  skills?: OpenClawSkillSummary[]
+}
 
-const skills = [
-  { name: '代码执行', desc: '在沙箱环境中运行 Python、JS 等代码并返回结果', icon: 'mdi:code-braces', color: '#3b82f6', status: 'active', category: '开发' },
-  { name: '网页搜索', desc: '实时搜索互联网获取最新信息', icon: 'mdi:web', color: '#10b981', status: 'active', category: '搜索' },
-  { name: '文件读写', desc: '读取和写入本地文件系统中的文件', icon: 'mdi:file-outline', color: '#f59e0b', status: 'active', category: '文件' },
-  { name: '数据库查询', desc: '连接数据库执行 SQL 查询并返回结果', icon: 'mdi:database-outline', color: '#8b5cf6', status: 'inactive', category: '数据' },
-  { name: '图像生成', desc: '根据文字描述生成图像', icon: 'mdi:image-outline', color: '#ec4899', status: 'inactive', category: '创作' },
-  { name: 'Shell 命令', desc: '在系统终端执行 Shell 命令', icon: 'mdi:console', color: '#e74c3c', status: 'active', category: '开发' },
-  { name: 'HTTP 请求', desc: '发送 HTTP 请求调用外部 API', icon: 'mdi:api', color: '#06b6d4', status: 'active', category: '网络' },
-  { name: '邮件发送', desc: '通过 SMTP 发送电子邮件', icon: 'mdi:email-outline', color: '#f97316', status: 'inactive', category: '通知' },
-  { name: '日历管理', desc: '读取和创建日历事件', icon: 'mdi:calendar-outline', color: '#84cc16', status: 'inactive', category: '效率' },
-]
+const loading = ref(true)
+const error = ref('')
+const skills = ref<SkillCard[]>([])
 
-const filteredSkills = computed(() => {
-  if (activeTab.value === 'all') return skills
-  return skills.filter(s => s.status === activeTab.value)
+function buildSkillCard(skill: OpenClawSkillSummary): SkillCard {
+  return {
+    ...skill,
+    desc: skill.description || '',
+    icon: skill.available ? 'mdi:lightning-bolt-outline' : 'mdi:lightning-bolt-off-outline',
+    color: skill.available ? '#10b981' : '#9ca3af',
+  }
+}
+
+async function fetchSkills() {
+  loading.value = true
+  error.value = ''
+
+  try {
+    const response = await fetch('/api/openclaw/skills')
+    const payload = await response.json() as SkillsResponse
+
+    if (!response.ok || payload?.ok === false) {
+      throw new Error(payload?.error || '加载 Skills 失败')
+    }
+
+    skills.value = Array.isArray(payload.skills) ? payload.skills.map(buildSkillCard) : []
+  } catch (err) {
+    error.value = err instanceof Error ? err.message : '加载 Skills 失败'
+    skills.value = []
+  } finally {
+    loading.value = false
+  }
+}
+
+onMounted(() => {
+  fetchSkills()
 })
 </script>
 
 <style scoped>
-.oc-tag-active {
-  background: #f0fdf4 !important;
-  border-color: #bbf7d0 !important;
-  color: #16a34a !important;
-  font-size: 13px;
+.skill-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+  font-size: 12px;
+  font-weight: 500;
 }
-.oc-tag-inactive {
-  background: #f3f4f6 !important;
-  border-color: #e5e7eb !important;
-  color: #9ca3af !important;
-  font-size: 13px;
+
+.skill-status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 9999px;
 }
-.oc-tag-category {
-  background: #f3f4f6 !important;
-  border-color: #e5e7eb !important;
-  color: #6b7280 !important;
-  font-size: 13px;
+
+.skill-status--active {
+  color: #16a34a;
+}
+
+.skill-status--active .skill-status-dot {
+  background: #22c55e;
+}
+
+.skill-status--inactive {
+  color: #9ca3af;
+}
+
+.skill-status--inactive .skill-status-dot {
+  background: #d1d5db;
+}
+
+.skill-meta {
+  font-size: 12px;
+  color: #6b7280;
+  background: #f3f4f6;
+  padding: 2px 8px;
+  border-radius: 9999px;
 }
 </style>

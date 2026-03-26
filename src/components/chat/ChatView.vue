@@ -10,8 +10,12 @@ import type { ThemeSelectionItem } from '@/types/library'
 
 const props = withDefaults(defineProps<{
   selectedThemes?: ThemeSelectionItem[]
+  prefillText?: string
+  prefillVersion?: number
 }>(), {
   selectedThemes: () => [],
+  prefillText: '',
+  prefillVersion: 0,
 })
 
 const sessionsStore = useSessionsStore()
@@ -62,6 +66,12 @@ function handleSend(text: string) {
       正在连接 Gateway...
     </div>
     <MessageList :messages="chatStore.messages" :tool-calls="chatStore.toolCalls" :loading="chatStore.loading" class="flex-1" />
-    <MessageInput :disabled="connectionStore.status !== 'connected'" :streaming="chatStore.streaming" @send="handleSend" />
+    <MessageInput
+      :disabled="connectionStore.status !== 'connected'"
+      :streaming="chatStore.streaming"
+      :prefill-text="props.prefillText"
+      :prefill-version="props.prefillVersion"
+      @send="handleSend"
+    />
   </div>
 </template>

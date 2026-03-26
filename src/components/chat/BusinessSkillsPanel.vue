@@ -2,71 +2,82 @@
   <div class="panel-card">
     <h3 class="panel-title">业务流程 Skills</h3>
     <div class="skills-list">
-      <div v-for="skill in skills" :key="skill.id" class="skill-item">
-        <div class="skill-icon-wrap">
-          <Icon :icon="skill.icon" class="skill-icon" />
+      <div v-if="loading" class="panel-state">正在加载 Skills...</div>
+      <div v-else-if="error" class="panel-state panel-state--error">{{ error }}</div>
+      <div v-else-if="skills.length === 0" class="panel-state">当前 workspace 下暂无可用 Skills</div>
+      <el-tooltip
+        v-for="skill in skills"
+        :key="skill.id"
+        placement="top"
+        :show-after="300"
+      >
+        <template #content>
+          <div class="skill-tooltip">
+            <div class="skill-tooltip-title">{{ skill.name }}</div>
+            <div v-if="skill.description" class="skill-tooltip-desc">{{ skill.description }}</div>
+          </div>
+        </template>
+        <div class="skill-item" @click="handleSkillClick(skill)">
+          <div class="skill-icon-wrap">
+            <Icon icon="mdi:lightning-bolt-outline" class="skill-icon" />
+          </div>
+          <div class="skill-info">
+            <p class="skill-name">{{ skill.name }}</p>
+            <p class="skill-desc">{{ skill.description || "暂无描述" }}</p>
+          </div>
+          <div class="skill-right">
+            <span v-if="skill.available" class="skill-dot skill-dot--on" />
+            <span v-else class="skill-dot skill-dot--off" />
+            <Icon icon="mdi:chevron-right" class="skill-chevron" />
+          </div>
         </div>
-        <div class="skill-info">
-          <p class="skill-name">{{ skill.name }}</p>
-          <p class="skill-desc">{{ skill.desc }}</p>
-        </div>
-        <div class="skill-right">
-          <span v-if="skill.available" class="skill-dot skill-dot--on" />
-          <span v-else class="skill-dot skill-dot--off" />
-          <Icon icon="mdi:chevron-right" class="skill-chevron" />
-        </div>
-      </div>
+      </el-tooltip>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
+import { onMounted, ref } from "vue";
 import { Icon } from "@iconify/vue";
+import type { OpenClawSkillSummary } from "@/types/openclaw";
 
-const skills = [
-  {
-    id: "overview",
-    name: "数据概览",
-    desc: "进行可能数据概括：数据概览",
-    icon: "mdi:chart-bar",
-    available: true,
-  },
-  {
-    id: "anomaly",
-    name: "异常分析",
-    desc: "进行可数常分析，异常分析",
-    icon: "mdi:alert-circle-outline",
-    available: true,
-  },
-  {
-    id: "report",
-    name: "生成汇报",
-    desc: "进行可能数据概览，生成汇报",
-    icon: "mdi:file-chart-outline",
-    available: true,
-  },
-  {
-    id: "plan",
-    name: "生成方案",
-    desc: "进行可能生成方案、生成方案",
-    icon: "mdi:lightbulb-outline",
-    available: true,
-  },
-  {
-    id: "approval",
-    name: "流程审批建议",
-    desc: "流程审批建议，可以给流程审批建议",
-    icon: "mdi:account-check-outline",
-    available: true,
-  },
-  {
-    id: "breakdown",
-    name: "任务拆解",
-    desc: "任务选步骤组成的任务拆解",
-    icon: "mdi:format-list-checks",
-    available: false,
-  },
-];
+const emit = defineEmits<{
+  skillSelect: [exampleRequest: string];
+}>();
+
+const skills = ref<OpenClawSkillSummary[]>([]);
+const loading = ref(true);
+const error = ref("");
+
+async function fetchSkills() {
+  loading.value = true;
+  error.value = "";
+
+  try {
+    const response = await fetch("/api/openclaw/skills");
+    const payload = await response.json();
+
+    if (!response.ok || payload?.ok === false) {
+      throw new Error(payload?.error || "加载 Skills 失败");
+    }
+
+    skills.value = Array.isArray(payload?.skills) ? payload.skills : [];
+  } catch (err) {
+    error.value = err instanceof Error ? err.message : "加载 Skills 失败";
+    skills.value = [];
+  } finally {
+    loading.value = false;
+  }
+}
+
+function handleSkillClick(skill: OpenClawSkillSummary) {
+  if (!skill.exampleRequest) return;
+  emit("skillSelect", skill.exampleRequest);
+}
+
+onMounted(() => {
+  fetchSkills();
+});
 </script>
 
 <style scoped>
@@ -95,6 +106,43 @@ const skills = [
   flex-direction: column;
   gap: 4px;
   overflow-y: auto;
+}
+
+.panel-state {
+  padding: 18px 12px;
+  border: 1px dashed #e5e7eb;
+  border-radius: 8px;
+  background: #fafafa;
+  color: #8c8c8c;
+  font-size: 12px;
+  line-height: 1.5;
+  text-align: center;
+}
+
+.panel-state--error {
+  color: #cf1322;
+  background: #fff1f0;
+  border-color: #ffccc7;
+}
+
+.skill-tooltip {
+  max-width: 280px;
+}
+
+.skill-tooltip-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: #fff;
+  line-height: 1.4;
+}
+
+.skill-tooltip-desc {
+  margin-top: 4px;
+  font-size: 12px;
+  line-height: 1.5;
+  color: rgba(255, 255, 255, 0.82);
+  white-space: normal;
+  word-break: break-word;
 }
 
 .skill-item {

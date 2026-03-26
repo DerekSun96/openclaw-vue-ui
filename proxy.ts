@@ -1,7 +1,7 @@
 import { createServer } from 'http'
 import { WebSocketServer, WebSocket } from 'ws'
 import { createPrivateKey, createPublicKey, sign, generateKeyPairSync, createHash } from 'crypto'
-import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'fs'
+import { readFileSync, writeFileSync, existsSync, mkdirSync, readdirSync, statSync } from 'fs'
 import { join } from 'path'
 import { homedir } from 'os'
 
@@ -41,6 +41,15 @@ interface TokenInfo {
   savedAt: number
 }
 
+interface OpenClawSkillSummary {
+  id: string
+  name: string
+  description: string
+  available: boolean
+  path: string
+  exampleRequest?: string
+}
+
 // Load or create device identity
 function loadOrCreateIdentity(): DeviceIdentity {
   if (existsSync(IDENTITY_FILE)) {
@@ -69,6 +78,105 @@ function loadToken(): TokenInfo | null {
 
 function saveToken(info: TokenInfo) {
   writeFileSync(TOKEN_FILE, JSON.stringify(info, null, 2))
+}
+
+function readOpenClawConfig(): Record<string, any> {
+  const configPath = join(homedir(), '.openclaw', 'openclaw.json')
+  try {
+    return JSON.parse(readFileSync(configPath, 'utf8'))
+  } catch {
+    return {}
+  }
+}
+
+function resolveWorkspacePath(): string {
+  const configuredWorkspace = readOpenClawConfig()?.agents?.defaults?.workspace
+  if (typeof configuredWorkspace === 'string' && configuredWorkspace.trim()) {
+    return configuredWorkspace
+  }
+  return join(homedir(), '.openclaw', 'workspace')
+}
+
+function parseSkillFrontmatter(content: string): { name?: string; description?: string } {
+  const match = content.match(/^---\r?\n([\s\S]*?)\r?\n---/)
+  if (!match) return {}
+
+  const result: { name?: string; description?: string } = {}
+  for (const rawLine of match[1].split(/\r?\n/)) {
+    if (/^\s/.test(rawLine)) continue
+    const line = rawLine.trim()
+    if (!line) continue
+
+    const nameMatch = line.match(/^name:\s*(.+)$/)
+    if (nameMatch) {
+      result.name = nameMatch[1].trim().replace(/^['"]|['"]$/g, '')
+      continue
+    }
+
+    const descriptionMatch = line.match(/^description:\s*(.+)$/)
+    if (descriptionMatch) {
+      result.description = descriptionMatch[1].trim().replace(/^['"]|['"]$/g, '')
+    }
+  }
+
+  return result
+}
+
+function parseExampleRequest(content: string): string {
+  const lines = content.split(/\r?\n/)
+
+  for (let index = 0; index < lines.length; index += 1) {
+    const line = lines[index].trim()
+    const normalizedLine = line.replace(/\*\*/g, '')
+    const inlineMatch = normalizedLine.match(/^示例请求[:：]\s*(.+)$/)
+    if (inlineMatch) return inlineMatch[1].trim()
+
+    if (/^示例请求[:：]$/.test(normalizedLine)) {
+      for (let nextIndex = index + 1; nextIndex < lines.length; nextIndex += 1) {
+        const nextLine = lines[nextIndex].trim()
+        if (!nextLine) continue
+        if (/^[-*]\s+/.test(nextLine)) return nextLine.replace(/^[-*]\s+/, '').trim()
+        return nextLine
+      }
+    }
+  }
+
+  return ''
+}
+
+function readWorkspaceSkills(): OpenClawSkillSummary[] {
+  const workspacePath = resolveWorkspacePath()
+  const skillsDir = join(workspacePath, 'skills')
+  if (!existsSync(skillsDir)) return []
+
+  return readdirSync(skillsDir)
+    .map((entryName) => {
+      const skillDir = join(skillsDir, entryName)
+      if (!statSync(skillDir).isDirectory()) return null
+
+      const skillFile = join(skillDir, 'SKILL.md')
+      const content = existsSync(skillFile) ? readFileSync(skillFile, 'utf8') : ''
+      const frontmatter = content ? parseSkillFrontmatter(content) : {}
+      const exampleRequest = content ? parseExampleRequest(content) : ''
+
+      return {
+        id: entryName,
+        name: frontmatter.name || entryName,
+        description: frontmatter.description || '',
+        available: true,
+        path: skillDir,
+        exampleRequest: exampleRequest || undefined,
+      }
+    })
+    .filter((skill): skill is OpenClawSkillSummary => skill !== null)
+}
+
+function sendJson(res: any, statusCode: number, payload: Record<string, unknown>) {
+  res.writeHead(statusCode, {
+    'Content-Type': 'application/json',
+    'Access-Control-Allow-Origin': '*',
+  })
+  res.end(JSON.stringify(payload))
 }
 
 const identity = loadOrCreateIdentity()
@@ -103,8 +211,27 @@ function buildConnectParams(nonce: string) {
 
 // HTTP server
 const server = createServer((req, res) => {
-  res.writeHead(200, { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' })
-  res.end(JSON.stringify({ ok: true, proxy: 'openclaw-gateway-proxy', paired: !!tokenInfo }))
+  const url = new URL(req.url ?? '/', `http://${req.headers.host ?? `127.0.0.1:${PROXY_PORT}`}`)
+
+  if (req.method === 'GET' && url.pathname === '/api/openclaw/skills') {
+    try {
+      const skills = readWorkspaceSkills()
+      sendJson(res, 200, {
+        ok: true,
+        workspace: resolveWorkspacePath(),
+        skills,
+      })
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Failed to read workspace skills'
+      sendJson(res, 500, {
+        ok: false,
+        error: message,
+      })
+    }
+    return
+  }
+
+  sendJson(res, 200, { ok: true, proxy: 'openclaw-gateway-proxy', paired: !!tokenInfo })
 })
 
 const wss = new WebSocketServer({ server })

@@ -42,6 +42,10 @@ import type { ThemeSelectionItem } from "@/types/library";
 
 type ThemeItem = ThemeSelectionItem;
 
+const props = defineProps<{
+  clearSelectionVersion?: number;
+}>();
+
 const emit = defineEmits<{
   selectionChange: [themes: ThemeItem[]];
 }>();
@@ -156,6 +160,14 @@ function emitSelectedThemes() {
 watch(deptNo, () => {
   void loadThemes();
 });
+
+watch(
+  () => props.clearSelectionVersion,
+  () => {
+    activeThemeIds.value = [];
+    emit("selectionChange", []);
+  },
+);
 
 onMounted(() => {
   void loadThemes();
