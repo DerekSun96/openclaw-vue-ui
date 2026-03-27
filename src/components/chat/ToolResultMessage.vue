@@ -2,6 +2,8 @@
 import { ref, computed } from 'vue'
 import type { ChatMessage, ToolCallState } from '@/types/message'
 import MarkdownRenderer from './MarkdownRenderer.vue'
+import ChatToolChart from './ChatToolChart.vue'
+import ChatToolTable from './ChatToolTable.vue'
 
 const props = defineProps<{
   message: ChatMessage
@@ -33,6 +35,21 @@ const textContent = computed(() => {
   return text || toolCall.value?.output || ''
 })
 
+const parsedOutput = computed<Record<string, any> | null>(() => {
+  if (!textContent.value) return null
+  try {
+    const parsed = JSON.parse(textContent.value)
+    return parsed && typeof parsed === 'object' ? parsed : null
+  } catch {
+    return null
+  }
+})
+
+const isChartOutput = computed(() => parsedOutput.value?._type === 'chart')
+const isTableOutput = computed(() => parsedOutput.value?._type === 'table')
+const isStructuredOutput = computed(() => isChartOutput.value || isTableOutput.value)
+const contentWidthClass = computed(() => (isStructuredOutput.value ? 'max-w-[80%] w-[80%]' : 'max-w-[80%]'))
+
 function formatTime(ts: number): string {
   return new Date(ts).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })
 }
@@ -43,7 +60,7 @@ function formatTime(ts: number): string {
     <div class="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center flex-shrink-0 mt-1">
       <span class="text-gray-400 text-sm">⚙</span>
     </div>
-    <div class="min-w-0 max-w-[80%] space-y-1.5">
+    <div class="min-w-0 space-y-1.5" :class="contentWidthClass">
       <!-- Tool call card (input) -->
       <div
         class="border border-gray-200 rounded-lg overflow-hidden cursor-pointer hover:border-gray-300 transition-colors"
@@ -77,7 +94,9 @@ function formatTime(ts: number): string {
           <span class="ml-auto text-gray-400 transition-transform text-xs" :class="{ 'rotate-180': outputExpanded }">▾</span>
         </div>
         <div v-if="outputExpanded" class="border-t border-gray-100 px-3 py-2">
-          <div v-if="textContent" class="text-xs">
+          <ChatToolChart v-if="isChartOutput && textContent" :content="textContent" />
+          <ChatToolTable v-else-if="isTableOutput && textContent" :content="textContent" />
+          <div v-else-if="textContent" class="text-xs">
             <MarkdownRenderer :content="textContent" />
           </div>
           <div v-else class="text-xs text-gray-400 italic">No output</div>

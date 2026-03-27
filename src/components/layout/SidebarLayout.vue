@@ -27,7 +27,7 @@
         </button>
       </div>
       <div class="oc-header-right">
-        <el-dropdown trigger="hover" @command="handleUserCommand">
+        <el-dropdown trigger="hover" placement="bottom-end" popper-class="oc-user-dropdown-popper" @command="handleUserCommand">
           <button type="button" class="oc-user-trigger" aria-label="用户菜单">
             <span v-if="departmentName" class="oc-user-dept">
               <Icon icon="mdi:domain" class="oc-user-dept-icon" />
@@ -338,6 +338,15 @@ async function handleUserCommand(command: string | number | object) {
   display: inline-flex;
   align-items: center;
   gap: 8px;
+}
+
+:global(.oc-user-dropdown-popper .el-dropdown-menu) {
+  min-width: 0;
+}
+
+:global(.oc-user-dropdown-popper .el-popper__arrow) {
+  left: auto !important;
+  right: 18px !important;
 }
 
 /* Body */

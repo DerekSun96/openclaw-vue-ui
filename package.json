@@ -21,6 +21,7 @@
     "@tailwindcss/vite": "^4.2.1",
     "@types/ws": "^8.18.1",
     "axios": "^1.13.6",
+    "echarts": "^6.0.0",
     "element-plus": "^2.13.5",
     "markdown-it": "^14.1.1",
     "pinia": "^3.0.4",

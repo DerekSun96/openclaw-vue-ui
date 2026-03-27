@@ -13,15 +13,19 @@ const props = defineProps<{
 
 const listRef = ref<HTMLDivElement>()
 
+function scrollToBottom() {
+  if (!listRef.value) return
+  listRef.value.scrollTop = listRef.value.scrollHeight
+}
+
 watch(
-  () => props.messages.length,
+  () => props.messages,
   () => {
     nextTick(() => {
-      if (listRef.value) {
-        listRef.value.scrollTop = listRef.value.scrollHeight
-      }
+      scrollToBottom()
     })
   },
+  { deep: true },
 )
 </script>
 
