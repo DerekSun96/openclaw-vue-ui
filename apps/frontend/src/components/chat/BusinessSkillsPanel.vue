@@ -39,6 +39,7 @@
 <script setup lang="ts">
 import { onMounted, ref } from "vue";
 import { Icon } from "@iconify/vue";
+import { resolveOpenClawApiUrl } from "@/config/openclaw";
 import type { OpenClawSkillSummary } from "@/types/openclaw";
 
 const emit = defineEmits<{
@@ -59,7 +60,8 @@ async function fetchSkills() {
   error.value = "";
 
   try {
-    const response = await fetch("/api/openclaw/skills");
+    const skillsUrl = await resolveOpenClawApiUrl("/openclaw/skills");
+    const response = await fetch(skillsUrl);
     const payload = await response.json();
 
     if (!response.ok || payload?.ok === false) {

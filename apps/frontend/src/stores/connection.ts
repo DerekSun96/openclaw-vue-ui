@@ -2,6 +2,7 @@ import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import type { ConnectionStatus } from '@/types/protocol'
 import { GatewayClient } from '@/services/gateway'
+import { resolveOpenClawEndpoints } from '@/config/openclaw'
 
 export const gateway = new GatewayClient()
 
@@ -30,23 +31,8 @@ export const useConnectionStore = defineStore('connection', () => {
   })
 
   async function resolveProxyUrl(): Promise<string> {
-    // 1. URL query param: ?proxyUrl=ws://...
-    const params = new URLSearchParams(location.search)
-    const fromQuery = params.get('proxyUrl')
-    if (fromQuery) return fromQuery
-
-    // 2. Runtime config file: /config.json
-    try {
-      const res = await fetch('/config.json')
-      if (res.ok) {
-        const cfg = await res.json()
-        if (cfg.proxyUrl) return cfg.proxyUrl
-      }
-    } catch { /* ignore */ }
-
-    // 3. Default: same origin
-    const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:'
-    return `${protocol}//${location.host}/ws`
+    const { wsUrl } = await resolveOpenClawEndpoints()
+    return wsUrl
   }
 
   async function connect(url?: string) {

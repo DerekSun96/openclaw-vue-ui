@@ -60,6 +60,7 @@
 import { onMounted, ref } from 'vue'
 import { Icon } from '@iconify/vue'
 import SidebarLayout from '@/components/layout/SidebarLayout.vue'
+import { resolveOpenClawApiUrl } from '@/config/openclaw'
 import type { OpenClawSkillSummary } from '@/types/openclaw'
 
 interface SkillCard extends OpenClawSkillSummary {
@@ -93,7 +94,8 @@ async function fetchSkills() {
   error.value = ''
 
   try {
-    const response = await fetch('/api/openclaw/skills')
+    const skillsUrl = await resolveOpenClawApiUrl('/openclaw/skills')
+    const response = await fetch(skillsUrl)
     const payload = await response.json() as SkillsResponse
 
     if (!response.ok || payload?.ok === false) {

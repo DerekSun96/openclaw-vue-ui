@@ -74,7 +74,7 @@ const filtered = computed(() => {
   if (!search.value) return sessions.list
   const q = search.value.toLowerCase()
   return sessions.list.filter(s =>
-    s.label.toLowerCase().includes(q) || (s.model ?? '').toLowerCase().includes(q)
+    (s.label ?? '').toLowerCase().includes(q) || (s.model ?? '').toLowerCase().includes(q)
   )
 })
 

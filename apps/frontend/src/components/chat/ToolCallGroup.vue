@@ -11,12 +11,14 @@ const props = defineProps<{
 const expanded = ref(false)
 
 const toolUseBlocks = computed(() =>
-  props.blocks.filter((b) => b.type === 'tool_use' || b.type === 'toolCall').map((b: any) => ({
-    type: 'tool_use' as const,
-    id: b.id,
-    name: b.name,
-    input: b.input ?? b.arguments ?? {},
-  })),
+  props.blocks
+    .filter((block): block is Extract<ContentBlock, { type: 'tool_use' }> => block.type === 'tool_use')
+    .map((block) => ({
+      type: 'tool_use' as const,
+      id: block.id,
+      name: block.name,
+      input: block.input,
+    })),
 )
 
 const summary = computed(() => {

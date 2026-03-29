@@ -1,3 +1,4 @@
+import { config as loadEnv } from 'dotenv'
 import { createServer } from 'http'
 import { WebSocketServer, WebSocket } from 'ws'
 import { createPrivateKey, createPublicKey, sign, generateKeyPairSync, createHash } from 'crypto'
@@ -5,8 +6,12 @@ import { readFileSync, writeFileSync, existsSync, mkdirSync, readdirSync, statSy
 import { join } from 'path'
 import { homedir } from 'os'
 
+loadEnv()
+
 const GATEWAY_URL = process.env.OPENCLAW_GATEWAY_URL || 'ws://127.0.0.1:18789'
+const PROXY_HOST = process.env.PROXY_HOST || '0.0.0.0'
 const PROXY_PORT = parseInt(process.env.PROXY_PORT || '18790')
+const CORS_ORIGIN = process.env.CORS_ORIGIN || '*'
 const DATA_DIR = join(homedir(), '.openclaw-vue-ui')
 
 // Try to read gateway token from openclaw config
@@ -149,32 +154,32 @@ function readWorkspaceSkills(): OpenClawSkillSummary[] {
   const skillsDir = join(workspacePath, 'skills')
   if (!existsSync(skillsDir)) return []
 
-  return readdirSync(skillsDir)
-    .map((entryName) => {
+  return readdirSync(skillsDir).flatMap((entryName) => {
       const skillDir = join(skillsDir, entryName)
-      if (!statSync(skillDir).isDirectory()) return null
+      if (!statSync(skillDir).isDirectory()) return []
 
       const skillFile = join(skillDir, 'SKILL.md')
       const content = existsSync(skillFile) ? readFileSync(skillFile, 'utf8') : ''
       const frontmatter = content ? parseSkillFrontmatter(content) : {}
       const exampleRequest = content ? parseExampleRequest(content) : ''
 
-      return {
+      return [{
         id: entryName,
         name: frontmatter.name || entryName,
         description: frontmatter.description || '',
         available: true,
         path: skillDir,
         exampleRequest: exampleRequest || undefined,
-      }
+      }]
     })
-    .filter((skill): skill is OpenClawSkillSummary => skill !== null)
 }
 
 function sendJson(res: any, statusCode: number, payload: Record<string, unknown>) {
   res.writeHead(statusCode, {
     'Content-Type': 'application/json',
-    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Origin': CORS_ORIGIN,
+    'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+    'Access-Control-Allow-Methods': 'GET, OPTIONS',
   })
   res.end(JSON.stringify(payload))
 }
@@ -212,6 +217,26 @@ function buildConnectParams(nonce: string) {
 // HTTP server
 const server = createServer((req, res) => {
   const url = new URL(req.url ?? '/', `http://${req.headers.host ?? `127.0.0.1:${PROXY_PORT}`}`)
+
+  if (req.method === 'OPTIONS') {
+    res.writeHead(204, {
+      'Access-Control-Allow-Origin': CORS_ORIGIN,
+      'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+      'Access-Control-Allow-Methods': 'GET, OPTIONS',
+    })
+    res.end()
+    return
+  }
+
+  if (req.method === 'GET' && url.pathname === '/healthz') {
+    sendJson(res, 200, {
+      ok: true,
+      proxy: 'openclaw-gateway-proxy',
+      gatewayUrl: GATEWAY_URL,
+      paired: !!tokenInfo?.token,
+    })
+    return
+  }
 
   if (req.method === 'GET' && url.pathname === '/api/openclaw/skills') {
     try {
@@ -320,9 +345,10 @@ wss.on('connection', (clientWs) => {
   })
 })
 
-server.listen(PROXY_PORT, () => {
-  console.log(`[proxy] OpenClaw Gateway Proxy on ws://127.0.0.1:${PROXY_PORT}`)
+server.listen(PROXY_PORT, PROXY_HOST, () => {
+  console.log(`[proxy] OpenClaw Gateway Proxy on ws://${PROXY_HOST}:${PROXY_PORT}`)
   console.log(`[proxy] Proxying to ${GATEWAY_URL}`)
   console.log(`[proxy] Device: ${identity.deviceId.slice(0, 16)}...`)
   console.log(`[proxy] Paired: ${!!tokenInfo?.token}`)
+  console.log(`[proxy] CORS origin: ${CORS_ORIGIN}`)
 })
