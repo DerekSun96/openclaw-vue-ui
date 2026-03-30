@@ -93,6 +93,37 @@ docker run -d --name openclaw-ui-proxy \
 - `GET /api/openclaw/skills`
 - WebSocket `/`
 
+`GET /healthz` 会返回类似：
+
+```json
+{
+  "ok": true,
+  "proxy": "openclaw-gateway-proxy",
+  "gatewayUrl": "ws://127.0.0.1:18789",
+  "hasGatewayToken": true,
+  "hasDeviceToken": false,
+  "clientConnected": false,
+  "gatewayConnected": false,
+  "authenticated": false,
+  "paired": false
+}
+```
+
+字段含义：
+
+- `hasGatewayToken`: 是否已读取到共享网关 token，例如来自 `.env` 或 `openclaw.json`
+- `hasDeviceToken`: 是否已经保存了 device token
+- `clientConnected`: 当前是否有客户端连到了 proxy
+- `gatewayConnected`: proxy 当前是否已经连上 OpenClaw Gateway
+- `authenticated`: proxy 当前是否已经完成网关认证
+- `paired`: 兼容旧字段，含义等同于 `hasDeviceToken`
+
+说明：
+
+- `paired: false` 不一定表示连接失败
+- 在共享 token 认证成功、但没有生成或保存 device token 的场景下，可能出现 `authenticated: true` 且 `paired: false`
+- 判断 proxy 是否已经真实连通 gateway，优先看 `gatewayConnected` 和 `authenticated`
+
 ## 同机联调
 
 根目录仍然保留了统一脚本：

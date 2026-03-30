@@ -46,6 +46,12 @@ interface TokenInfo {
   savedAt: number
 }
 
+interface ProxyRuntimeState {
+  clientConnected: boolean
+  gatewayConnected: boolean
+  authenticated: boolean
+}
+
 interface OpenClawSkillSummary {
   id: string
   name: string
@@ -187,6 +193,11 @@ function sendJson(res: any, statusCode: number, payload: Record<string, unknown>
 const identity = loadOrCreateIdentity()
 let tokenInfo = loadToken()
 const privateKey = createPrivateKey(identity.privateKeyPem)
+const runtimeState: ProxyRuntimeState = {
+  clientConnected: false,
+  gatewayConnected: false,
+  authenticated: false,
+}
 
 function buildConnectParams(nonce: string) {
   const signedAt = Date.now()
@@ -233,6 +244,11 @@ const server = createServer((req, res) => {
       ok: true,
       proxy: 'openclaw-gateway-proxy',
       gatewayUrl: GATEWAY_URL,
+      hasGatewayToken: !!GATEWAY_TOKEN,
+      hasDeviceToken: !!tokenInfo?.token,
+      clientConnected: runtimeState.clientConnected,
+      gatewayConnected: runtimeState.gatewayConnected,
+      authenticated: runtimeState.authenticated,
       paired: !!tokenInfo?.token,
     })
     return
@@ -263,12 +279,16 @@ const wss = new WebSocketServer({ server })
 
 wss.on('connection', (clientWs) => {
   console.log('[proxy] Client connected')
+  runtimeState.clientConnected = true
   const gwWs = new WebSocket(GATEWAY_URL, { origin: `http://127.0.0.1:${PROXY_PORT}` })
   let authenticated = false
   let buffered: string[] = []
   let pairingRequestId: string | null = null
 
-  gwWs.on('open', () => console.log('[proxy] Gateway WS open'))
+  gwWs.on('open', () => {
+    runtimeState.gatewayConnected = true
+    console.log('[proxy] Gateway WS open')
+  })
 
   gwWs.on('message', (data) => {
     const msg = JSON.parse(data.toString())
@@ -284,6 +304,7 @@ wss.on('connection', (clientWs) => {
     if (!authenticated && msg.id === 'proxy-connect') {
       if (msg.ok) {
         authenticated = true
+        runtimeState.authenticated = true
         // Check if we got a new deviceToken in the response
         if (msg.payload?.deviceToken) {
           tokenInfo = { token: msg.payload.deviceToken, scopes: msg.payload.scopes ?? [], savedAt: Date.now() }
@@ -309,10 +330,12 @@ wss.on('connection', (clientWs) => {
         } else if (code === 'AUTH_DEVICE_TOKEN_MISMATCH') {
           // Token was rotated, clear and retry
           tokenInfo = null
+          runtimeState.authenticated = false
           writeFileSync(TOKEN_FILE, '{}')
           console.log('[proxy] Token mismatch, cleared. Reconnecting...')
           gwWs.close()
         } else {
+          runtimeState.authenticated = false
           console.error('[proxy] Auth failed:', msg.error)
           clientWs.send(JSON.stringify({ type: 'event', event: 'proxy.error', payload: msg.error }))
         }
@@ -327,11 +350,17 @@ wss.on('connection', (clientWs) => {
   })
 
   gwWs.on('close', (code, reason) => {
+    runtimeState.gatewayConnected = false
+    runtimeState.authenticated = false
     console.log(`[proxy] Gateway closed: ${code} ${reason}`)
     if (clientWs.readyState === WebSocket.OPEN) clientWs.close()
   })
 
-  gwWs.on('error', (err) => console.error('[proxy] Gateway error:', err.message))
+  gwWs.on('error', (err) => {
+    runtimeState.gatewayConnected = false
+    runtimeState.authenticated = false
+    console.error('[proxy] Gateway error:', err.message)
+  })
 
   clientWs.on('message', (data) => {
     const str = data.toString()
@@ -340,6 +369,7 @@ wss.on('connection', (clientWs) => {
   })
 
   clientWs.on('close', () => {
+    runtimeState.clientConnected = false
     console.log('[proxy] Client disconnected')
     if (gwWs.readyState === WebSocket.OPEN) gwWs.close()
   })
